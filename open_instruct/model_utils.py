@@ -48,12 +48,13 @@ logger = logger_utils.setup_logger(__name__)
 
 
 _OLMO_CORE_TO_HF_ATTN: dict[AttentionBackendName, str] = {
-    AttentionBackendName.flash_4: "flash_attention_4",
     AttentionBackendName.flash_3: "flash_attention_3",
     AttentionBackendName.flash_2: "flash_attention_2",
-    AttentionBackendName.torch: "sdpa",
-    AttentionBackendName.te: "sdpa",
+    AttentionBackendName.torch: "eager",
+    AttentionBackendName.te: "eager",
 }
+if hasattr(AttentionBackendName, "flash_4"):
+    _OLMO_CORE_TO_HF_ATTN[AttentionBackendName.flash_4] = "flash_attention_4"
 
 
 def olmo_core_attn_to_hf(backend: AttentionBackendName) -> str:
@@ -82,7 +83,7 @@ def _gpu_compute_major() -> int | None:
 def detect_attn_implementation() -> AttentionBackendName:
     if not torch.cuda.is_available():
         result = AttentionBackendName.torch
-    elif _is_flash_attn_4_available() and _gpu_compute_major() >= 10:
+    elif hasattr(AttentionBackendName, "flash_4") and _is_flash_attn_4_available() and _gpu_compute_major() >= 10:
         result = AttentionBackendName.flash_4
     elif transformers.utils.is_flash_attn_3_available() and _gpu_compute_major() >= 9:
         result = AttentionBackendName.flash_3

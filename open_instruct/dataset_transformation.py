@@ -797,6 +797,10 @@ def get_tokenizer_tulu_v2_2(tc: "TokenizerConfig"):
         trust_remote_code=tc.trust_remote_code,
         use_fast=tc.use_fast,
     )
+    # OLMo 3+ uses TokenizersBackend which doesn't match GPTNeoXTokenizerFast;
+    # ensure bos_token is set so the tulu chat template can prepend it.
+    if "olmo" in str(tc.tokenizer_name_or_path).lower() and tokenizer.bos_token is None:
+        tokenizer.bos_token = tokenizer.eos_token
     # no default pad token for llama!
     # here we add all special tokens again, because the default ones are not in the special_tokens_map
     # only add if the pad token is not present already, or if the current one is set to eos_token_id.
@@ -1178,6 +1182,9 @@ def sft_tulu_tokenize_and_truncate_v1(row: dict[str, Any], tokenizer: PreTrained
     messages = row["messages"]
     if len(messages) == 0:
         raise ValueError("messages field is empty.")
+    for msg in messages:
+        if msg.get("content") is None:
+            msg["content"] = ""
     input_ids_result = tokenizer.apply_chat_template(
         conversation=messages,
         tokenize=True,

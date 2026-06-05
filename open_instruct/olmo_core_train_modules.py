@@ -31,7 +31,8 @@ logger = logger_utils.setup_logger(__name__)
 
 
 _DOC_LENS_ATTN_BACKENDS = frozenset(
-    {AttentionBackendName.flash_2, AttentionBackendName.flash_3, AttentionBackendName.flash_4}
+    {AttentionBackendName.flash_2, AttentionBackendName.flash_3}
+    | ({AttentionBackendName.flash_4} if hasattr(AttentionBackendName, "flash_4") else set())
 )
 
 
