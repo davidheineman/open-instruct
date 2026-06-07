@@ -21,6 +21,9 @@ os.environ["NCCL_CUMEM_ENABLE"] = "0"  # NOQA
 with contextlib.suppress(Exception):
     import deepspeed
 
+import torch  # noqa: E402
+torch.backends.cuda.enable_cudnn_sdp(False)
+
 # isort: on
 import json
 import math
@@ -498,6 +501,8 @@ def main(args: FlatArguments, tc: TokenizerConfig):
         args.dataset_mixer_list = [item for pair in args.dataset_mixer.items() for item in pair]
     with accelerator.main_process_first():
         transform_fn_args = [{"max_seq_length": args.max_seq_length}, {}]
+        while len(transform_fn_args) < len(args.dataset_transform_fn):
+            transform_fn_args.insert(0, {})
         train_dataset = get_cached_dataset_tulu(
             dataset_mixer_list=args.dataset_mixer_list,
             dataset_mixer_list_splits=args.dataset_mixer_list_splits,
@@ -512,6 +517,8 @@ def main(args: FlatArguments, tc: TokenizerConfig):
             dataset_skip_cache=args.dataset_skip_cache,
         )
         train_dataset = train_dataset.shuffle(seed=args.seed)
+        if args.max_train_samples is not None:
+            train_dataset = train_dataset.select(range(min(args.max_train_samples, len(train_dataset))))
         train_dataset.set_format(type="pt")
     if accelerator.is_main_process:
         visualize_token(train_dataset[0][INPUT_IDS_KEY], tokenizer)
@@ -523,7 +530,7 @@ def main(args: FlatArguments, tc: TokenizerConfig):
     # when multiple ranks on a shared filesystem all try to access the
     # HF hub cache concurrently.
     model_path = args.config_name or args.model_name_or_path
-    if model_path and accelerator.is_main_process:
+    if model_path and accelerator.is_main_process and not os.path.isdir(model_path):
         snapshot_download(model_path, revision=args.model_revision)
     accelerator.wait_for_everyone()
 
@@ -593,7 +600,7 @@ def main(args: FlatArguments, tc: TokenizerConfig):
                 config=config,
                 trust_remote_code=tc.trust_remote_code,
                 low_cpu_mem_usage=args.low_cpu_mem_usage,
-                dtype=torch.bfloat16,
+                dtype=torch.float32 if config.model_type == "v4m_moe" else torch.bfloat16,
                 attn_implementation=model_utils.detect_hf_attn_implementation(),
             )
     else:

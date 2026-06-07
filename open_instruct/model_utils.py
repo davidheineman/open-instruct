@@ -34,6 +34,14 @@ from accelerate.state import AcceleratorState
 from deepspeed.runtime.engine import DeepSpeedEngine
 from huggingface_hub import HfApi
 from olmo_core.nn.attention import AttentionBackendName
+
+if not hasattr(AttentionBackendName, "flash_4"):
+    _f4 = str.__new__(AttentionBackendName, "flash_4")
+    _f4._name_ = "flash_4"
+    _f4._value_ = "flash_4"
+    AttentionBackendName._member_map_["flash_4"] = _f4
+    AttentionBackendName._value2member_map_["flash_4"] = _f4
+    type.__setattr__(AttentionBackendName, "flash_4", _f4)
 from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
@@ -66,7 +74,10 @@ def detect_hf_attn_implementation() -> str:
 
 
 def _is_flash_attn_4_available() -> bool:
-    return importlib.util.find_spec("flash_attn.cute") is not None
+    try:
+        return importlib.util.find_spec("flash_attn.cute") is not None
+    except ModuleNotFoundError:
+        return False
 
 
 @functools.lru_cache(maxsize=1)

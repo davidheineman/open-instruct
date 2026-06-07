@@ -1531,7 +1531,12 @@ def rlvr_max_length_filter_v2(
     return len(row[INPUT_IDS_PROMPT_KEY]) <= max_prompt_token_length
 
 
+def sft_filter_none_content_v1(row: dict[str, Any], tokenizer: PreTrainedTokenizer):
+    return all(msg.get("content") is not None for msg in row["messages"])
+
+
 TRANSFORM_FNS = {
+    "sft_filter_none_content_v1": (sft_filter_none_content_v1, "filter"),
     "sft_tokenize_v1": (sft_tokenize_v1, "map"),
     "sft_tokenize_mask_out_prompt_v1": (sft_tokenize_mask_out_prompt_v1, "map"),
     "sft_filter_v1": (sft_filter_v1, "filter"),
