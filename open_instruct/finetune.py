@@ -600,7 +600,7 @@ def main(args: FlatArguments, tc: TokenizerConfig):
                 config=config,
                 trust_remote_code=tc.trust_remote_code,
                 low_cpu_mem_usage=args.low_cpu_mem_usage,
-                dtype=torch.float32 if config.model_type == "v4m_moe" else torch.bfloat16,
+                torch_dtype=torch.bfloat16,
                 attn_implementation=model_utils.detect_hf_attn_implementation(),
             )
     else:

@@ -18,6 +18,7 @@ import asyncio
 import functools
 import importlib.util
 import itertools
+import os
 import pathlib
 import tempfile
 from collections import OrderedDict, defaultdict
@@ -70,6 +71,9 @@ def olmo_core_attn_to_hf(backend: AttentionBackendName) -> str:
 
 @functools.lru_cache(maxsize=1)
 def detect_hf_attn_implementation() -> str:
+    override = os.environ.get("OPEN_INSTRUCT_ATTN_IMPL")
+    if override:
+        return override
     return olmo_core_attn_to_hf(detect_attn_implementation())
 
 
